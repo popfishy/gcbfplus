@@ -135,7 +135,8 @@ class DeterministicPolicy(MultiAgentPolicy):
     def eval_action(self, params: Params, obs: GraphsTuple, action: Action, key: PRNGKey) -> Tuple[Array, Array]:
         raise NotImplementedError
 
-
+# 基于 PPO (Proximal Policy Optimization) 算法的随机策略。
+# 它使用 TanhNormal 分布来生成动作，并提供了计算动作概率和熵的方法。
 class PPOPolicy(MultiAgentPolicy):
 
     def __init__(

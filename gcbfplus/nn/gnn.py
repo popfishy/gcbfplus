@@ -11,6 +11,7 @@ from ..utils.graph import GraphsTuple
 from .mlp import MLP, default_nn_init
 from .utils import safe_get
 
+# 是否保存注意力信息
 save_attn = False
 
 
@@ -18,7 +19,9 @@ def save_set_attn(v):
     global save_attn
     save_attn = v
 
-
+# message: 消息传递函数，接受边特征和节点特征。
+# aggregate: 聚合函数，处理消息聚合。
+# update: 更新节点特征的函数。
 class GNNUpdate(NamedTuple):
     message: Callable[[EdgeAttr, Node, Node], Array]
     aggregate: Callable[[Array, Array, int], Array]

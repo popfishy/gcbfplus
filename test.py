@@ -25,13 +25,16 @@ def test(args):
     stamp_str = datetime.datetime.now().strftime("%m%d-%H%M")
 
     # set up environment variables and seed
+    # 配置JAX运行环境
+    # JAX 不会在启动时预分配所有的 GPU 内存
     os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
     if args.cpu:
         os.environ["JAX_PLATFORM_NAME"] = "cpu"
     if args.debug:
+        # disable jit(即时编译)
         jax.config.update("jax_disable_jit", True)
     np.random.seed(args.seed)
-
+    
     # load config
     if not args.u_ref and args.path is not None:
         with open(os.path.join(args.path, "config.yaml"), "r") as f:
@@ -114,6 +117,7 @@ def test(args):
         act_fn = jax.jit(env.u_ref)
         step = 0
 
+    # 创建一个伪随机数生成器PRNG,使用用户提供的种子,用于生成可重复的随机数序列。
     test_key = jr.PRNGKey(args.seed)
     test_keys = jr.split(test_key, 1_000)[: args.epi]
     test_keys = test_keys[args.offset:]
@@ -128,22 +132,26 @@ def test(args):
         def get_bb_cbf_fn(T_graph: GraphsTuple):
             T = len(T_graph.states)
             outs = [get_bb_cbf_fn_(tree_index(T_graph, kk)) for kk in range(T)]
+            # TODO ？？？
             Tb_x, Tb_y, Tbb_h = jtu.tree_map(lambda *x: jnp.stack(list(x), axis=0), *outs)
             return Tb_x, Tb_y, Tbb_h
     else:
         get_bb_cbf_fn = None
         cbf_fn = None
 
+    # 是否跳过 JIT 编译的回合（rollout）步骤
     if args.nojit_rollout:
         print("Only jit step, no jit rollout!")
         rollout_fn = env.rollout_fn_jitstep(act_fn, args.max_step, noedge=True, nograph=args.no_video)
-
+        
+        # TODO：可能用于检查安全状态和回合是否结束？
         is_unsafe_fn = None
         is_finish_fn = None
     else:
         print("jit rollout!")
         rollout_fn = jax_jit_np(env.rollout_fn(act_fn, args.max_step))
 
+        # TODO：jax.vmap 对 env.collision_mask 进行向量化处理。向量化处理使得该函数可以针对多个输入同时计算，提高计算效率。
         is_unsafe_fn = jax_jit_np(jax_vmap(env.collision_mask))
         is_finish_fn = jax_jit_np(jax_vmap(env.finish_mask))
 
@@ -190,6 +198,7 @@ def test(args):
               f"success rate: {success_rate * 100:.3f}%")
 
         rates.append(np.array([safe_rate, finish_rate, success_rate]))
+    # TODO:将 is_unsafes 和 is_finishes 列表中的值堆叠成数组并计算沿着第一个轴的最大值，得到全局的不安全和完成状态
     is_unsafe = np.max(np.stack(is_unsafes), axis=1)
     is_finish = np.max(np.stack(is_finishes), axis=1)
 
@@ -218,6 +227,8 @@ def test(args):
     if args.no_video:
         return
 
+    # By yjq: 修改了视频保存路径
+    path = path.replace("pretrained", "logs")
     videos_dir = pathlib.Path(path) / "videos"
     videos_dir.mkdir(exist_ok=True, parents=True)
     for ii, (rollout, Ta_is_unsafe, cbf) in enumerate(zip(rollouts, is_unsafes, cbfs)):

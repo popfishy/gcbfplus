@@ -74,6 +74,7 @@ class SingleIntegrator(MultiAgentEnv):
     def action_dim(self) -> int:
         return 2  # vx, vy
 
+    # 初始化环境状态，包括生成随机的障碍物、目标和Agent
     def reset(self, key: Array) -> GraphsTuple:
         self._t = 0
 
@@ -101,6 +102,7 @@ class SingleIntegrator(MultiAgentEnv):
 
         return self.get_graph(env_states)
 
+    # 使用欧拉法计算Agent下一状态
     def agent_step_euler(self, agent_states: AgentState, action: Action) -> AgentState:
         assert action.shape == (self.num_agents, self.action_dim)
         assert agent_states.shape == (self.num_agents, self.state_dim)
@@ -109,6 +111,7 @@ class SingleIntegrator(MultiAgentEnv):
         assert n_state_agent_new.shape == (self.num_agents, self.state_dim)
         return self.clip_state(n_state_agent_new)
 
+    # 进行一次时间步的模拟，更新代理状态并计算奖励
     def step(
             self, graph: EnvGraphsTuple, action: Action, get_eval_info: bool = False
     ) -> Tuple[EnvGraphsTuple, Reward, Cost, Done, Info]:
@@ -147,6 +150,7 @@ class SingleIntegrator(MultiAgentEnv):
 
         return self.get_graph(next_state), reward, cost, done, info
 
+    # 计算Agent之间的碰撞成本以及与障碍物的交互成本
     def get_cost(self, graph: GraphsTuple) -> Cost:
         agent_states = graph.type_states(type_idx=0, n_type=self.num_agents)
         obstacles = graph.env_states.obstacle

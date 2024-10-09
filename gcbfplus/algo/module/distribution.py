@@ -6,6 +6,13 @@ import jax.random as jr
 tfd = tfp.distributions
 tfb = tfp.bijectors
 
+# 1. 将一个基础分布通过 tanh 函数进行变换，创建一个新的分布。
+# 2. tanh 变换将原分布的取值范围压缩到 (-1, 1) 区间内。
+# 3. 处理了变换后分布的概率计算、熵估计等问题。
+# 4. 通过设置阈值来处理 tanh 在接近 ±1 时的数值不稳定性。
+# 这种变换在强化学习中很常见，特别是在处理连续动作空间时。它可以将无界的动作值映射到有界区间，同时保持动作分布的概率特性。
+# 这对于实现稳定的策略梯度算法很有帮助。
+
 
 class TanhTransformedDistribution(tfd.TransformedDistribution):
 

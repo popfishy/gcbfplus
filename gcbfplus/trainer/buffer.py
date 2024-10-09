@@ -9,7 +9,6 @@ from ..utils.typing import Array
 
 
 class Buffer(ABC):
-
     def __init__(self, size: int):
         self._size = size
 

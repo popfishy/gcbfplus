@@ -4,7 +4,6 @@ import jax
 import jax.numpy as jnp
 
 from typing import Tuple
-
 from ..env.base import MultiAgentEnv
 from ..env.double_integrator import DoubleIntegrator
 from ..env.dubins_car import DubinsCar
@@ -40,7 +39,7 @@ def compute_gae(
 ) -> Tuple[Array, Array]:
     return jax.vmap(ft.partial(compute_gae_fn, gamma=gamma, gae_lambda=gae_lambda))(values, rewards, dones, next_values)
 
-
+# pos是单个agent的位置，o_obs_pos是所有障碍物的位置，a_pos是所有agent的位置，r是半径，k是邻居数
 def pwise_cbf_single_integrator_(pos: Array, agent_idx: int, o_obs_pos: Array, a_pos: Array, r: float, k: int):
     n_agent = len(a_pos)
 
@@ -94,6 +93,7 @@ def pwise_cbf_double_integrator_(state: Array, agent_idx: int, o_obs_state: Arra
     # Take radius into account.
     k_dist_sq = k_dist_sq - 4 * r ** 2
 
+    #TODO 高阶CBF函数设计
     k_h0 = k_dist_sq
     assert k_h0.shape == (k,)
 
@@ -178,6 +178,54 @@ def pwise_cbf_dubins_car(graph: GraphsTuple, r: float, n_agent: int, n_rays: int
     ak_h0, ak_isobs = fn(a_states, agent_idx, a_obs_states, a_states)
     return ak_h0, ak_isobs
 
+def pwise_cbf_linear_drone_(state: Array, agent_idx: int, o_obs_state: Array, a_state: Array, r: float, k: int):
+    # state: ( 6, )
+    n_agent = len(a_state)
+
+    pos = state[:3]
+    all_obs_state = jnp.concatenate([a_state, o_obs_state], axis=0)
+    all_obs_pos = all_obs_state[:, :3]
+    del o_obs_state
+
+    # Only consider the k closest obstacles.
+    o_dist_sq = ((pos - all_obs_pos) ** 2).sum(axis=-1)
+    # Remove self collisions
+    o_dist_sq = o_dist_sq.at[agent_idx].set(1e2)
+    # Take the k closest obstacles.
+    k_idx = jnp.argsort(o_dist_sq)[:k]
+    k_dist_sq = o_dist_sq[k_idx]
+    # Take radius into account. Add some epsilon for qp solver error.
+    k_dist_sq = k_dist_sq - 4 * (1.01 * r) ** 2
+
+    k_h0 = k_dist_sq
+    assert k_h0.shape == (k,)
+
+    k_xdiff = state[:3] - all_obs_state[k_idx][:, :3]
+    k_vdiff = state[3:6] - all_obs_state[k_idx][:, 3:6]
+    assert k_xdiff.shape == k_vdiff.shape == (k, 3)
+
+    k_h0_dot = 2 * (k_xdiff * k_vdiff).sum(axis=-1)
+    assert k_h0_dot.shape == (k,)
+
+    k_h1 = k_h0_dot + 3.0 * k_h0
+
+    k_isobs = k_idx >= n_agent
+
+    return k_h1, k_isobs
+
+
+def pwise_cbf_linear_drone(graph: GraphsTuple, r: float, n_agent: int, n_rays: int, k: int):
+    # (n_agents, 4)
+    a_states = graph.type_states(type_idx=0, n_type=n_agent)
+    # (n_obs, 4)
+    obs_states = graph.type_states(type_idx=2, n_type=n_agent * n_rays)
+    a_obs_states = ei.rearrange(obs_states, "(n_agent n_ray) d -> n_agent n_ray d", n_agent=n_agent)
+
+    agent_idx = jnp.arange(n_agent)
+    fn = jax.vmap(ft.partial(pwise_cbf_linear_drone_, r=r, k=k), in_axes=(0, 0, 0, None))
+    ak_h0, ak_isobs = fn(a_states, agent_idx, a_obs_states, a_states)
+    return ak_h0, ak_isobs
+
 
 def pwise_cbf_crazyflie_(state: Array, agent_idx: int, o_obs_state: Array, a_state: Array, r: float, k: int):
     # state: ( 12, )
@@ -220,6 +268,8 @@ def pwise_cbf_crazyflie_(state: Array, agent_idx: int, o_obs_state: Array, a_sta
         pqr = jnp.array([p, q, r])
 
         # Linear velocity
+        # 机体坐标系(cf:CrazyFlie frame)到世界坐标系(W:World frame)的转换矩阵  
+        # quantity_frame1_frame2  quantity 是被描述的物理量 frame1 通常表示参考坐标系  frame2 表示该量被表示的坐标系
         R_W_cf = jnp.array(
             [
                 [c_psi * c_th, c_psi * s_th * s_phi - s_psi * c_phi, c_psi * s_th * c_phi + s_psi * s_phi],
@@ -232,6 +282,7 @@ def pwise_cbf_crazyflie_(state: Array, agent_idx: int, o_obs_state: Array, a_sta
         assert v_Wcf_W.shape == (3,)
 
         # Euler angle dynamics.
+        # roll pitch yaw(x,y,z) 对应 phi theta psi
         mat = jnp.array(
             [
                 [0, s_phi / c_th, c_phi / c_th],
@@ -296,55 +347,6 @@ def pwise_cbf_crazyflie(graph: GraphsTuple, r: float, n_agent: int, n_rays: int,
 
     agent_idx = jnp.arange(n_agent)
     fn = jax.vmap(ft.partial(pwise_cbf_crazyflie_, r=r, k=k), in_axes=(0, 0, 0, None))
-    ak_h0, ak_isobs = fn(a_states, agent_idx, a_obs_states, a_states)
-    return ak_h0, ak_isobs
-
-
-def pwise_cbf_linear_drone_(state: Array, agent_idx: int, o_obs_state: Array, a_state: Array, r: float, k: int):
-    # state: ( 6, )
-    n_agent = len(a_state)
-
-    pos = state[:3]
-    all_obs_state = jnp.concatenate([a_state, o_obs_state], axis=0)
-    all_obs_pos = all_obs_state[:, :3]
-    del o_obs_state
-
-    # Only consider the k closest obstacles.
-    o_dist_sq = ((pos - all_obs_pos) ** 2).sum(axis=-1)
-    # Remove self collisions
-    o_dist_sq = o_dist_sq.at[agent_idx].set(1e2)
-    # Take the k closest obstacles.
-    k_idx = jnp.argsort(o_dist_sq)[:k]
-    k_dist_sq = o_dist_sq[k_idx]
-    # Take radius into account. Add some epsilon for qp solver error.
-    k_dist_sq = k_dist_sq - 4 * (1.01 * r) ** 2
-
-    k_h0 = k_dist_sq
-    assert k_h0.shape == (k,)
-
-    k_xdiff = state[:3] - all_obs_state[k_idx][:, :3]
-    k_vdiff = state[3:6] - all_obs_state[k_idx][:, 3:6]
-    assert k_xdiff.shape == k_vdiff.shape == (k, 3)
-
-    k_h0_dot = 2 * (k_xdiff * k_vdiff).sum(axis=-1)
-    assert k_h0_dot.shape == (k,)
-
-    k_h1 = k_h0_dot + 3.0 * k_h0
-
-    k_isobs = k_idx >= n_agent
-
-    return k_h1, k_isobs
-
-
-def pwise_cbf_linear_drone(graph: GraphsTuple, r: float, n_agent: int, n_rays: int, k: int):
-    # (n_agents, 4)
-    a_states = graph.type_states(type_idx=0, n_type=n_agent)
-    # (n_obs, 4)
-    obs_states = graph.type_states(type_idx=2, n_type=n_agent * n_rays)
-    a_obs_states = ei.rearrange(obs_states, "(n_agent n_ray) d -> n_agent n_ray d", n_agent=n_agent)
-
-    agent_idx = jnp.arange(n_agent)
-    fn = jax.vmap(ft.partial(pwise_cbf_linear_drone_, r=r, k=k), in_axes=(0, 0, 0, None))
     ak_h0, ak_isobs = fn(a_states, agent_idx, a_obs_states, a_states)
     return ak_h0, ak_isobs
 

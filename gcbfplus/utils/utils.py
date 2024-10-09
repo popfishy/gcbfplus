@@ -18,7 +18,7 @@ from rich.progress import Progress, ProgressColumn
 from rich.text import Text
 from .typing import Array
 
-
+# 将输入数组 x 的前两维合并为一维
 def merge01(x):
     return ei.rearrange(x, "n1 n2 ... -> (n1 n2) ...")
 
@@ -137,7 +137,7 @@ class CustomTimeElapsedColumn(ProgressColumn):
         delta_str = str(delta)
         return Text(delta_str, style="progress.elapsed")
 
-
+# 保存 Matplotlib 动画并显示进度条
 def save_anim(ani: FuncAnimation, path: pathlib.Path):
     pbar = Progress(*Progress.get_default_columns(), CustomTimeElapsedColumn())
     pbar.start()

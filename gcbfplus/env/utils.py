@@ -13,6 +13,7 @@ from ..utils.utils import merge01
 from .obstacle import Obstacle, Rectangle, Cuboid, Sphere
 
 
+# 四阶龙格-库塔（RK4）法，解常微分方程（ODE）
 def RK4_step(x_dot_fn: Callable, x: State, u: Action, dt: float) -> Array:
     k1 = x_dot_fn(x, u)
     k2 = x_dot_fn(x + 0.5 * dt * k1, u)
@@ -20,7 +21,7 @@ def RK4_step(x_dot_fn: Callable, x: State, u: Action, dt: float) -> Array:
     k4 = x_dot_fn(x + dt * k3, u)
     return x + dt / 6.0 * (k1 + 2 * k2 + 2 * k3 + k4)
 
-
+# 离散时间LQR，求增益K
 def lqr(
         A: np.ndarray,
         B: np.ndarray,
@@ -111,6 +112,7 @@ def raytracing(starts: Pos, ends: Pos, obstacles: Obstacle, max_returns: int) ->
     # if the start point if inside the obstacle, return the start point
     is_in = inside_obstacles(starts, obstacles)
 
+    # 计算从单个起始点到结束点的光线与单个障碍物的交点
     def raytracing_single(start: Pos, end: Pos, obstacle: Obstacle):
         return obstacle.raytracing(start, end)
 
@@ -128,9 +130,11 @@ def raytracing(starts: Pos, ends: Pos, obstacles: Obstacle, max_returns: int) ->
 
     hitting_points = starts + (ends - starts) * (alphas[..., None])
 
+    # 返回最近交点坐标
     return hitting_points[alphas_return]
 
-
+# 生成有效的起始点和目标点
+# min_dist：起始点和目标点之间的最小距离  max_travel：Agent从起始点到目标点的最大移动距离
 def get_node_goal_rng(
         key: PRNGKey,
         side_length: float,

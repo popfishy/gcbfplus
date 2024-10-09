@@ -117,7 +117,7 @@ class GCBF(MultiAgentController):
         actor_params = self.actor.net.init(actor_key, nominal_graph, self.n_agents)
         actor_optim = optax.adam(learning_rate=lr_actor)
         self.actor_optim = optax.apply_if_finite(actor_optim, 1_000_000)
-        self.actor_train_state = TrainState.create(
+        self.actor_train_state  = TrainState.create(
             apply_fn=self.actor.sample_action,
             params=actor_params,
             tx=self.actor_optim
@@ -158,6 +158,7 @@ class GCBF(MultiAgentController):
         nn_action = 2 * self.actor.get_action(params, graph) + self._env.u_ref(graph)
         return nn_action
 
+    # 首先尝试使用参考控制输入，检查是否满足安全条件；如果参考输入不满足安全条件，则结合神经网络策略和参考输入生成初始动作
     def online_policy_refinement(self, graph: GraphsTuple, params: Optional[Params] = None) -> Action:
         if params is None:
             params = self.actor_params

@@ -1,3 +1,5 @@
+# 基类：提供了多智能体环境的基本属性、状态和动作裁剪、仿真步骤、状态和动作限制、
+# 控制仿射动力学、图结构生成、参考控制输入、前向图生成、安全掩码、不安全掩码、碰撞掩码、仿真回放和视频渲染等功能
 import functools as ft
 import numpy as np
 import pathlib
@@ -14,6 +16,7 @@ from ..utils.typing import Action, Array, Cost, Done, Info, PRNGKey, Reward, Sta
 from ..utils.utils import jax2np, jax_jit_np, tree_concat_at_front, tree_stack
 
 
+# NamedTuple 不可变性：创建完毕不可修改   具备只读属性
 class StepResult(NamedTuple):
     graph: GraphsTuple
     reward: Reward
@@ -79,6 +82,7 @@ class MultiAgentEnv(ABC):
     def max_episode_steps(self) -> int:
         return self._max_step
 
+    # 将状态限制在状态限制的范围内
     def clip_state(self, state: State) -> State:
         lower_limit, upper_limit = self.state_lim(state)
         return jnp.clip(state, lower_limit, upper_limit)

@@ -46,7 +46,7 @@ To reproduce the results shown in our paper, one can refer to [`settings.yaml`](
 To train the model (only GCBF+ and GCBF need training), use:
 
 ```bash
-python train.py --algo gcbf+ --env DoubleIntegrator -n 8 --area-size 4 --loss-action-coef 1e-4 --n-env-train 16 --lr-actor 1e-5 --lr-cbf 1e-5 --horizon 32
+python train.py --algo gcbf+ --env DoubleIntegrator -n 8 --area-size 4 --loss-action-coef 1e-4 --n-env-train 16 --lr-actor 1e-5 --lr-cbf 1e-5 --horizon 32 --steps 1000
 ```
 
 In our paper, we use 8 agents with 1000 training steps. The training logs will be saved in folder `./logs/<env>/<algo>/seed<seed>_<training-start-time>`. We also provide the following flags:
@@ -103,7 +103,7 @@ This should report the safety rate, goal reaching rate, and success rate of the 
 - `--cpu`: use CPU
 - `--u-ref`: test the nominal controller
 - `--env`: test environment (not needed if the log folder is specified)
-- `--algo`: test algorithm (not needed if the log folder is specified)
+- `--algo`: test algorithm (not needed if the log folder is specified)  
 - `--step`: test step (not needed if testing the last saved model)
 - `--epi`: number of episodes to test
 - `--offset`: offset of the random seeds
@@ -114,14 +114,26 @@ This should report the safety rate, goal reaching rate, and success rate of the 
 
 To test the nominal controller, use:
 
+algo: 1.centralized_cbf   2.dec_share_cbf   3.gcbf_plus   4.gcbf
+
 ```bash
-python test.py --env SingleIntegrator -n 16 --u-ref --epi 1 --area-size 4 --obs 0
+python test.py --env SingleIntegrator -n 100 --u-ref --epi 1 --area-size 4 --obs 20 --max-step 2000
 ```
 
 To test the CBF-QPs, use:
 
 ```bash
-python test.py --env SingleIntegrator -n 16 --algo dec_share_cbf --epi 1 --area-size 4 --obs 0 --alpha 1
+python test.py --env SingleIntegrator -n 16 --algo dec_share_cbf --epi 1 --area-size 4 --obs 0 --alpha 1 
+
+python test.py --env SingleIntegrator -n 16 --algo centralized_cbf --epi 1 --area-size 4 --obs 0 --alpha 1 
+```
+
+To test the GCBF+,use:
+
+```bash
+python test.py --env DoubleIntegrator -n 60 --algo gcbf --epi 1 --area-size 4 --obs 10 --alpha 1 --max-step 1000 --step 260 --path "pretrained/DoubleIntegrator/gcbf"
+
+python test.py --env SingleIntegrator -n 60 --algo gcbf+ --epi 1 --area-size 4 --obs 10 --alpha 1 --max-step 1000 --path "pretrained/SingleIntegrator/gcbf+"
 ```
 
 ### Pre-trained models

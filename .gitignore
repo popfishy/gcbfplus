@@ -8,3 +8,5 @@ videos/
 wandb/
 test_log.csv
 *.egg-info
+logs/** 
+**.mp4

@@ -15,7 +15,6 @@ from .base import MultiAgentController
 
 
 class CentralizedCBF(MultiAgentController):
-
     def __init__(
             self,
             env: MultiAgentEnv,
