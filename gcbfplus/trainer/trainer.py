@@ -76,8 +76,9 @@ class Trainer:
     def train(self):
         # record start time
         start_time = time()
-
+    
         # preprocess the rollout function
+        # 表示进行一次滚动（rollout），即在环境中执行一系列行动以收集数据
         def rollout_fn_single(params, key):
             return rollout(self.env, ft.partial(self.algo.step, params=params), key)
 
@@ -109,7 +110,9 @@ class Trainer:
                 reward_min, reward_max = total_reward.min(), total_reward.max()
                 reward_mean = np.mean(total_reward)
                 reward_final = np.mean(test_rollouts.rewards[:, -1])
+                # finish_mask用来判断agents是否抵达终点
                 finish_fun = jax_vmap(jax_vmap(self.env_test.finish_mask))
+                # 计算所有测试环境完成率的均值
                 finish = finish_fun(test_rollouts.graph).max(axis=1).mean()
                 cost = test_rollouts.costs.sum(axis=-1).mean()
                 unsafe_frac = np.mean(test_rollouts.costs.max(axis=-1) >= 1e-6)

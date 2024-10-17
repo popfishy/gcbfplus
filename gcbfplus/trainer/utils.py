@@ -33,13 +33,14 @@ def rollout(
     Parameters
     ----------
     env: MultiAgentEnv
-    actor: Callable, [GraphsTuple, PRNGKey] -> [Action, LogPi]
+    actor: Callable, [GraphsTuple, PRNGKey] -> [Action, LogPi]  LogPi可能表示对数概率（log probability）
     key: PRNGKey
 
     Returns
     -------
     data: Rollout
     """
+    # 将原始的随机键分割成两个新的键，一个用于初始化环境，另一个用于后续的步骤
     key_x0, key = jax.random.split(key)
     init_graph = env.reset(key_x0)
 
@@ -48,7 +49,11 @@ def rollout(
         next_graph, reward, cost, done, info = env.step(graph, action)
         return next_graph, (graph, action, reward, cost, done, log_pi, next_graph)
 
+    # 根据最大步骤数，将随机键分割成多个键，以供每一步使用
     keys = jax.random.split(key, env.max_episode_steps)
+    # 这是 JAX 中的一个高效循环操作，能够在不显式使用 Python 循环的情况下进行迭代
+    # 它会调用 body 函数 env.max_episode_steps 次
+    # graphs, actions, rewards, costs, dones, log_pis, next_graphs为每一次循环的结果组成的数组
     final_graph, (graphs, actions, rewards, costs, dones, log_pis, next_graphs) = \
         jax.lax.scan(body, init_graph, keys, length=env.max_episode_steps)
     data = Rollout(graphs, actions, rewards, costs, dones, log_pis, next_graphs)

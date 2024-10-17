@@ -372,7 +372,8 @@ class DoubleIntegrator(MultiAgentEnv):
         safe_mask = jnp.logical_and(safe_agent, safe_obs)
 
         return safe_mask
-
+    
+    # TODO：具体如何定义的，后续看 
     @ft.partial(jax.jit, static_argnums=(0,))
     def unsafe_mask(self, graph: GraphsTuple) -> Array:
         agent_state = graph.type_states(type_idx=0, n_type=self.num_agents)

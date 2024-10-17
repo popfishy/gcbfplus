@@ -32,7 +32,6 @@ class Batch(NamedTuple):
 
 
 class GCBFPlus(GCBF):
-
     def __init__(
             self,
             env: MultiAgentEnv,
@@ -176,8 +175,10 @@ class GCBFPlus(GCBF):
     def act(self, graph: GraphsTuple, params: Optional[Params] = None) -> Action:
         if params is None:
             params = self.actor_train_state.params
-        action = 2 * self.actor.get_action(params, graph) + self._env.u_ref(graph)
-        return action
+        # By yjq
+        action = self.actor.get_action(params, graph)
+        # action = 2 * self.actor.get_action(params, graph) + self._env.u_ref(graph)
+        return 2 * action + self._env.u_ref(graph)
 
     def step(self, graph: GraphsTuple, key: PRNGKey, params: Optional[Params] = None) -> Tuple[Action, Array]:
         if params is None:
@@ -194,7 +195,7 @@ class GCBFPlus(GCBF):
     def get_b_u_qp(self, b_graph: GraphsTuple, params) -> Action:
         b_u_qp, bT_relaxation = jax_vmap(ft.partial(self.get_qp_action, cbf_params=params))(b_graph)
         return b_u_qp
-
+    # 更新控制器和策略网络
     def update_nets(self, rollout: Rollout, safe_mask, unsafe_mask):
         update_info = {}
 
@@ -229,6 +230,7 @@ class GCBFPlus(GCBF):
 
         return update_info
 
+    # 从内存中抽样数据，处理与安全和不安全状态相关的掩码，并返回一个批次的样本。
     def sample_batch(self, rollout: Rollout, safe_mask, unsafe_mask):
         if self.buffer.length > self.batch_size:
             # sample from memory
@@ -362,7 +364,7 @@ class GCBFPlus(GCBF):
             unsafe_mask_batch = merge01(minibatch.unsafe_mask)
 
             def get_loss(cbf_params: Params, actor_params: Params) -> Tuple[Array, dict]:
-                # get CBF values
+                # get CBF values：分别计算带梯度和不带梯度的 CBF 值
                 cbf_fn = jax_vmap(ft.partial(self.cbf.get_cbf, cbf_params))
                 cbf_fn_no_grad = jax_vmap(ft.partial(self.cbf.get_cbf, jax.lax.stop_gradient(cbf_params)))
                 # (minibatch_size, n_agents)
