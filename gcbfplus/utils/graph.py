@@ -51,11 +51,11 @@ class GraphsTuple(tuple, Generic[_State, _EnvState]):
 
     nodes: Float[Array, "sum_n_node ..."]  # node features
     edges: Float[Array, "sum_n_edge ..."]  # edge features
-    states: _State  # node state features
+    states: _State  # node state features：包括 agent、goal、lidar_data通过np.concatenate沿着axis=0拼接  猜测数据为二维点
     receivers: Int[Array, "sum_n_edge"]
     senders: Int[Array, "sum_n_edge"]
     node_type: Int[Array, "sum_n_node"]  # by default, 0 is agent, -1 is padding
-    env_states: _EnvState  # environment state features
+    env_states: _EnvState  # environment state features：包括 agent、goal、obstacle
     connectivity: Int[Array, "sum_n_node sum_n_node"] = None  # desired connectivity matrix
 
     def __new__(

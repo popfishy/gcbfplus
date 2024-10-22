@@ -64,6 +64,9 @@ class DoubleIntegrator(MultiAgentEnv):
         self._K = jnp.array(lqr(self._A, self._B, self._Q, self._R))
         self.create_obstacles = jax_vmap(Rectangle.create)
 
+        # TODO:add by yjq
+        self.env_states = None
+
     @property
     def state_dim(self) -> int:
         return 4  # x, y, vx, vy
@@ -80,6 +83,7 @@ class DoubleIntegrator(MultiAgentEnv):
     def action_dim(self) -> int:
         return 2  # fx, fy
 
+    # 随机生成障碍物
     def reset(self, key: Array) -> GraphsTuple:
         self._t = 0
 
@@ -107,9 +111,9 @@ class DoubleIntegrator(MultiAgentEnv):
         states = jnp.concatenate([states, jnp.zeros((self.num_agents, 2))], axis=1)
         goals = jnp.concatenate([goals, jnp.zeros((self.num_agents, 2))], axis=1)
 
-        env_states = self.EnvState(states, goals, obstacles)
+        self.env_states = self.EnvState(states, goals, obstacles)
 
-        return self.get_graph(env_states)
+        return self.get_graph(self.env_states)
 
     def agent_accel(self, action: Action) -> Action:
         return action / self._params["m"]

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import jax
 import pathlib
+import time
 
 from colour import hsl2hex
 from matplotlib.animation import FuncAnimation
@@ -230,6 +231,12 @@ def render_video(
 
     # plot obstacles
     obs = graph0.env_states.obstacle
+
+    # print("******************************")
+    # print(obs)
+    # time.sleep(1000)
+    # print("******************************")
+    
     ax.add_collection(get_obs_collection(obs, obs_color, alpha=0.8))
 
     # plot agents

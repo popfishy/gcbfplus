@@ -58,6 +58,9 @@ class SingleIntegrator(MultiAgentEnv):
         self._K = jnp.array(lqr(self._A, self._B, self._Q, self._R))
         self.create_obstacles = jax_vmap(Rectangle.create)
 
+        # TODO:add by yjq
+        self.env_states = None
+
     @property
     def state_dim(self) -> int:
         return 2  # x, y
@@ -97,10 +100,10 @@ class SingleIntegrator(MultiAgentEnv):
         # randomly generate agent and goal
         states, goals = get_node_goal_rng(
             key, self.area_size, 2, obstacles, self.num_agents, 4 * self.params["car_radius"], self.max_travel)
-
-        env_states = self.EnvState(states, goals, obstacles)
-
-        return self.get_graph(env_states)
+        
+        self.env_states = self.EnvState(states, goals, obstacles)
+        
+        return self.get_graph(self.env_states)
 
     # 使用欧拉法计算Agent下一状态
     def agent_step_euler(self, agent_states: AgentState, action: Action) -> AgentState:

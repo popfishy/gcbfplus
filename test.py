@@ -144,14 +144,13 @@ def test(args):
         print("Only jit step, no jit rollout!")
         rollout_fn = env.rollout_fn_jitstep(act_fn, args.max_step, noedge=True, nograph=args.no_video)
         
-        # TODO：可能用于检查安全状态和回合是否结束？
+        # TODO：可能用于检查安全状态和回合是否结束？ 
         is_unsafe_fn = None
         is_finish_fn = None
     else:
         print("jit rollout!")
         rollout_fn = jax_jit_np(env.rollout_fn(act_fn, args.max_step))
 
-        # TODO：jax.vmap 对 env.collision_mask 进行向量化处理。向量化处理使得该函数可以针对多个输入同时计算，提高计算效率。
         is_unsafe_fn = jax_jit_np(jax_vmap(env.collision_mask))
         is_finish_fn = jax_jit_np(jax_vmap(env.finish_mask))
 

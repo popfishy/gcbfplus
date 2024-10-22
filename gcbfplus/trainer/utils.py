@@ -158,6 +158,7 @@ def get_bb_cbf(cbf: Callable, env: MultiAgentEnv, graph: GraphsTuple, agent_id: 
     b_xs = jnp.linspace(low_lim[x_dim], high_lim[x_dim], n_mesh)
     b_ys = jnp.linspace(low_lim[y_dim], high_lim[y_dim], n_mesh)
     bb_Xs, bb_Ys = jnp.meshgrid(b_xs, b_ys)
+    # 包括 agent、goal、lidar_data通过np.concatenate沿着axis=0拼接  猜测数据为二维点
     states = graph.states
 
     # generate new states

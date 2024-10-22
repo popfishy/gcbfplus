@@ -133,7 +133,9 @@ To test the GCBF+,use:
 ```bash
 python test.py --env DoubleIntegrator -n 60 --algo gcbf --epi 1 --area-size 4 --obs 10 --alpha 1 --max-step 1000 --step 260 --path "pretrained/DoubleIntegrator/gcbf"
 
-python test.py --env SingleIntegrator -n 60 --algo gcbf+ --epi 1 --area-size 4 --obs 10 --alpha 1 --max-step 1000 --path "pretrained/SingleIntegrator/gcbf+"
+python test.py --env SingleIntegrator -n 32 --algo gcbf+ --epi 1 --area-size 4 --obs 2 --alpha 1 --max-step 500 --path "pretrained/SingleIntegrator/gcbf+" 
+
+python test.py --env DubinsCar -n 2 --algo gcbf+ --epi 1 --area-size 4 --obs 10 --alpha 1 --max-step 1000 --path "pretrained/DubinsCar/gcbf+"
 ```
 
 ### Pre-trained models
